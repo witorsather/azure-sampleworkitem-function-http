@@ -12,7 +12,14 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Base64;
 import java.util.Optional;
+
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import java.io.StringReader;
+
 
 /**
  * Azure Functions with HTTP Trigger.
@@ -33,10 +40,6 @@ public class Function {
     ) HttpRequestMessage<Optional<String>> request,
     final ExecutionContext context
   ) {
-    // Item list
-    context
-      .getLogger()
-      .info("Request body is: " + request.getBody().orElse(""));
 
     String functionUrl =
       "https://funcapp-sampleworkitem-validacao-http.azurewebsites.net/api/httpvalidacao";
@@ -49,8 +52,22 @@ public class Function {
         .build();
     } else {
       // return JSON from to the client
+      
       // Generate document
+      // Decode the base64 string to get the original JSON content
       final String body = request.getBody().get();
+      byte[] decodedBytes = Base64.getDecoder().decode(body);
+      String decodedJson = new String(decodedBytes);
+
+      // Parse the decoded JSON string into a JSON object
+      // Parse the decoded JSON string into a JSON object
+      JsonReader jsonReader = Json.createReader(new StringReader(decodedJson));
+      JsonObject jsonObject = jsonReader.readObject();
+      jsonReader.close();
+
+      // Log the JSON object
+      context.getLogger().info("Log Function 1 JSON object: " + jsonObject.toString());
+      
       final String jsonDocument =
         "{\"function 2 recebendo \":\"123456\", " +
         "\"description\": \"" +
@@ -65,7 +82,7 @@ public class Function {
         .newBuilder()
         .uri(URI.create(functionUrl))
         .header("Content-Type", "application/json")
-        .POST(HttpRequest.BodyPublishers.ofString(jsonDocument))
+        .POST(HttpRequest.BodyPublishers.ofString(jsonObject.toString()))
         .build();
 
       // Send the HTTP request and retrieve the response
